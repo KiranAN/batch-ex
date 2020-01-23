@@ -1,0 +1,110 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:batch="http://www.springframework.org/schema/batch" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/batch
+		http://www.springframework.org/schema/batch/spring-batch-2.2.xsd
+		http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+	">
+
+	<import resource="batch-context.xml" />
+	<!-- <import resource="batch-database.xml" /> -->
+
+	<bean id="employee" class="com.javainuse.model.Employee" />
+	<bean id="itemEmployeeProcessor" class="com.javainuse.CustomEmployeeProcessor" />
+	<bean id="itemEmployeeProcessor2" class="com.javainuse.CustomEmployeeProcessor" />
+	<batch:job id="helloWorldBatchJob">
+		<batch:step id="EmployeeReader" next="EmployeeReader2">
+			<batch:tasklet>
+				<batch:chunk reader="cvsFileItemReader" writer="customWriter"
+					processor="itemEmployeeProcessor" commit-interval="10" skip-limit="10" retry-limit="3">
+					<batch:skippable-exception-classes>
+				        <batch:include class="org.springframework.batch.item.file.FlatFileParseException" />
+				    </batch:skippable-exception-classes>
+				      <batch:retryable-exception-classes>
+						<batch:include class="org.springframework.dao.OptimisticLockingFailureException" />
+					</batch:retryable-exception-classes>
+				</batch:chunk>
+			</batch:tasklet>
+		</batch:step>
+		<batch:step id="EmployeeReader2">
+			<batch:tasklet>
+				<batch:chunk reader="cvsFileItemReader2" writer="customWriter"
+					processor="itemEmployeeProcessor2" commit-interval="10" skip-limit="10" retry-limit="3">
+					<batch:skippable-exception-classes>
+				        <batch:include class="org.springframework.batch.item.file.FlatFileParseException" />
+				    </batch:skippable-exception-classes>
+				    <batch:retryable-exception-classes>
+						<batch:include class="org.springframework.dao.OptimisticLockingFailureException" />
+					</batch:retryable-exception-classes>
+				</batch:chunk>
+			</batch:tasklet>
+		</batch:step>
+	</batch:job>
+
+	<bean id="cvsFileItemReader" class="org.springframework.batch.item.file.FlatFileItemReader" scope="step">		
+		<property name="resource" value="classpath:employee-data.csv" />
+		<property name="linesToSkip" value="2"/>
+		
+		<property name="lineMapper">
+			<bean class="org.springframework.batch.item.file.mapping.DefaultLineMapper">			
+				<property name="lineTokenizer">
+					<bean
+						class="org.springframework.batch.item.file.transform.DelimitedLineTokenizer">
+						<property name="names" value="empId,empName" />
+					</bean>
+				</property>
+				<property name="fieldSetMapper">
+					<bean class="com.javainuse.EmployeeFieldSetMapper" >						
+					</bean>
+				</property>
+			</bean>
+			
+		</property>
+		<property name="strict" value="false" />
+	</bean>
+
+	<bean id="cvsFileItemReader2" class="org.springframework.batch.item.file.FlatFileItemReader" scope="step">		
+		<property name="resource" value="classpath:employee-data2.csv" />
+		<property name="linesToSkip" value="2"/>
+		
+		<property name="lineMapper">
+			<bean class="org.springframework.batch.item.file.mapping.DefaultLineMapper">
+			
+				<property name="lineTokenizer">
+					<bean
+						class="org.springframework.batch.item.file.transform.DelimitedLineTokenizer">
+						<property name="names" value="empId,empName" />
+					</bean>
+				</property>
+				<property name="fieldSetMapper">
+					
+					<bean class="com.javainuse.EmployeeFieldSetMapper" >
+						
+					</bean>
+				</property>
+			</bean>
+			
+		</property>
+		<property name="strict" value="false" />
+	</bean>
+	<bean id="customWriter" class="com.javainuse.CustomItemWriter" /> 
+	<bean id="xmlItemWriter" class="org.springframework.batch.item.xml.StaxEventItemWriter">
+		<property name="resource" value="file:c://xml/outputs/employee.xml" />
+		<property name="marshaller" ref="employeeMarshaller" />
+		<property name="rootTagName" value="employee" />
+	</bean>
+	<bean id="xmlItemWriter2" class="org.springframework.batch.item.xml.StaxEventItemWriter">
+		<property name="resource" value="file:c://xml/outputs/employee2.xml" />
+		<property name="marshaller" ref="employeeMarshaller" />
+		<property name="rootTagName" value="employee" />
+	</bean>
+	<bean id="employeeMarshaller" class="org.springframework.oxm.jaxb.Jaxb2Marshaller">
+		<property name="classesToBeBound">
+			<list>
+				<value>com.javainuse.model.Employee</value>
+			</list>
+		</property>
+	</bean>
+
+
+</beans>
